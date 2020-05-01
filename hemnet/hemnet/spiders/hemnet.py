@@ -1,17 +1,24 @@
 import scrapy
+import time
+import json
 #import cfscrape
 #from fake_useragent import UserAgent
 from .decoder import Decoder
-import time
+from scrapy import signals
+from pydispatch import dispatcher
+
 
 
 class QuotesSpider(scrapy.Spider):
     name = "hemnet"
+    # *** Change this url for your prefered search from hemnet.se ***
+    start_urls = ['https://www.hemnet.se/bostader?location_ids%5B%5D=474361&item_types%5B%5D=bostadsratt']
+    globalIndex = 0
+    results = {}
 
 
-    def start_requests(self):
-        url = 'https://www.hemnet.se/bostader?location_ids%5B%5D=17755&item_types%5B%5D=bostadsratt'
-        yield scrapy.Request(url=url, callback=self.parse)
+    def __init__(self):
+        dispatcher.connect(self.spider_closed, signals.spider_closed)
 
 
 
@@ -21,13 +28,13 @@ class QuotesSpider(scrapy.Spider):
             #ua = UserAgent(cache=False)
             #token, agent = cfscrape.get_tokens(adUrl, ua['google chrome'])
             #yield scrapy.Request(url=adUrl, cookies=token, headers={'User-Agent': agent}, callback=self.parseAd)
-            time.sleep(4)
+            time.sleep(3)
             yield scrapy.Request(url=adUrl, callback=self.parseAd)
 
 
         nextPage = response.css("a.next_page::attr('href')").get()
         if nextPage is not None:
-            time.sleep(3)
+            time.sleep(2)
             yield response.follow(nextPage, callback=self.parse)
 
 
@@ -38,8 +45,9 @@ class QuotesSpider(scrapy.Spider):
         area = response.css("div.property-info__primary-container > div.property-info__address-container > div.property-address > div.property-address__area-container > span.property-address__area::text").get()
 
         price = response.css("div.property-info__primary-container > div.property-info__price-container > p.qa-property-price::text").get()
-        price = price.replace('kr', '')
-        price = price.replace(u'\xa0', '')
+        if price != None:
+            price = price.replace('kr', '')
+            price = price.replace(u'\xa0', '')
         
         attrData = {}
         for attr in response.css("div.property-info__attributes-and-description > div.property-attributes > div.property-attributes-table > dl.property-attributes-table__area > div.property-attributes-table__row"):
@@ -79,16 +87,18 @@ class QuotesSpider(scrapy.Spider):
         i = 0
         for showing in response.css("ul.listing-showings__list > li"):
             showingTime = showing.css("div.listing-showings__showing-info > span.listing-showings__showing-time::text").get()
-            showingTime = showingTime.replace(u'\xa0', '')
-            showingTime = showingTime.replace(u'\n', '')
-            showingTime = showingTime.replace(u'\t', '')
-            showingTime = showingTime.strip()
+            if showingTime != None:
+                showingTime = showingTime.replace(u'\xa0', '')
+                showingTime = showingTime.replace(u'\n', '')
+                showingTime = showingTime.replace(u'\t', '')
+                showingTime = showingTime.strip()
 
             showingDesc = showing.css("div.listing-showings__showing-description::text").get()
-            showingDesc = showingDesc.replace(u'\xa0', '')
-            showingDesc = showingDesc.replace(u'\n', '')
-            showingDesc = showingDesc.replace(u'\t', '')
-            showingDesc = showingDesc.strip()
+            if showingTime != None:
+                showingDesc = showingDesc.replace(u'\xa0', '')
+                showingDesc = showingDesc.replace(u'\n', '')
+                showingDesc = showingDesc.replace(u'\t', '')
+                showingDesc = showingDesc.strip()
             
             showings[i] = {
                 "time": showingTime,
@@ -143,7 +153,28 @@ class QuotesSpider(scrapy.Spider):
 
 
 
+        self.results[self.globalIndex] = {
+            "hemnetUrl": hemnetUrl,
+            "address": address,
+            "area": area,
+            "price": price,
+            "attributes": attrData,
+            "description": description,
+            "agencyUrl": agencyUrl,
+            "showings": showings,
+            "brokerName": brokerName,
+            "brokerLink": brokerLink,
+            "brokerCompany": brokerCompany,
+            "brokerPhone": brokerPhone,
+            "brokerEmail": brokerEmail,
+        }
+        self.globalIndex = self.globalIndex + 1
 
+
+
+    def spider_closed(self, spider):
+        with open('hemnet.json', 'w') as fp:
+            json.dump(self.results, fp)
 
 
 
