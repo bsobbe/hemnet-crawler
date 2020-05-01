@@ -2,6 +2,7 @@ import scrapy
 #import cfscrape
 #from fake_useragent import UserAgent
 from .decoder import Decoder
+import time
 
 
 class QuotesSpider(scrapy.Spider):
@@ -20,11 +21,13 @@ class QuotesSpider(scrapy.Spider):
             #ua = UserAgent(cache=False)
             #token, agent = cfscrape.get_tokens(adUrl, ua['google chrome'])
             #yield scrapy.Request(url=adUrl, cookies=token, headers={'User-Agent': agent}, callback=self.parseAd)
+            time.sleep(4)
             yield scrapy.Request(url=adUrl, callback=self.parseAd)
 
 
         nextPage = response.css("a.next_page::attr('href')").get()
         if nextPage is not None:
+            time.sleep(3)
             yield response.follow(nextPage, callback=self.parse)
 
 
@@ -92,7 +95,7 @@ class QuotesSpider(scrapy.Spider):
                 "description": showingDesc
             }
             i = i + 1
-            
+
 
 
         for broker in response.css("div.broker-contact-card__information > p"):
