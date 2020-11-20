@@ -18,6 +18,8 @@ And feel free to do pull request if you feel like it :)
 
 
 # Check Me Out
+YouTube Channel: https://youtube.com/TheDevWay
+
 You can find me on all social media by the name @TheDevWay
 
 Or you can check out my website at http://thedevway.com
